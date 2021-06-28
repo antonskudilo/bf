@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,6 +13,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
+Route::group(['namespace' => 'Api'], function () {
+    Route::get('/news/{filter?}', 'NewsController@index')->name('news.index');
+    Route::apiResource('news', 'NewsController', [
+        'only' => ['show']
+    ]);
+
+    Route::group(['middleware' => ['admin'], 'namespace' => 'Admin', 'prefix' => 'admin', 'as' => 'admin.'], function () {
+        Route::get('/news/{filter?}', 'NewsController@index')->name('news.index');
+        Route::put('/news/change-status/{news}', 'NewsController@changeStatus')->name('news.change-status');
+        Route::apiResource('news', 'NewsController', [
+            'only' => ['show', 'store'],
+        ]);
+    });
 });

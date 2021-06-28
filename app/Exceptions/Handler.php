@@ -2,7 +2,10 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -50,6 +53,41 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $exception)
     {
-        return parent::render($request, $exception);
+        $exception = $this->prepareException($exception);
+
+        if ($exception instanceof HttpResponseException) {
+            return $exception->getResponse();
+        }
+
+        if ($exception instanceof AuthenticationException) {
+            return $this->unauthenticated($request, $exception);
+        }
+
+        if ($exception instanceof ValidationException) {
+            return response()->json(['error' => $exception->errors()],  422);
+        }
+
+        $response = [];
+        $statusCode = 500;
+
+        if (method_exists($exception, 'getStatusCode')) {
+            $statusCode = $exception->getStatusCode();
+        }
+
+        switch ($statusCode) {
+            case 404:
+                $response['error'] = 'Not Found';
+                break;
+
+            case 403:
+                $response['error'] = 'Forbidden';
+                break;
+
+            default:
+                $response['error'] = $exception->getMessage();
+                break;
+        }
+
+        return response()->json($response,  $statusCode);
     }
 }
